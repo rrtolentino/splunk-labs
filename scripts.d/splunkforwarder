@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Downloads, extracts, and run Splunk forwarder.
+
+if [ ! -e ${FWDR_HOME} ]; then
+   cd /opt
+   echo -e "Downloading Splunk Forwarder. This may take a while"
+   sudo wget -O splunkforwarder-7.2.0-8c86330ac18-Linux-x86_64.tgz 'https://www.splunk.com/bin/splunk/DownloadActivityServlet?architecture=x86_64&platform=linux&version=7.2.0&product=universalforwarder&filename=splunkforwarder-7.2.0-8c86330ac18-Linux-x86_64.tgz&wget=true' &> /dev/null || { echo -e "Failed downloading Splunk Forwarder"; exit 1; }
+   echo -e "- Successfully downloaded Splunk Forwarder"
+   echo -e "Extracting tar file..."
+   sudo tar -zxf splunkforwarder*.tgz &> /dev/null || { echo -e "Failed extracting tar file"; exit 1; }
+   echo -e "- Done extracting tar file."
+   sudo ${FWDR_SERVICE} start --accept-license --no-prompt || { echo -e "- Failed starting splunk"; exit 1; }
+   sudo ${FWDR_SERVICE} enable boot-start || { echo -e "- Failed enabling boot-start for splunk forwarder"; exit 1; }
+fi
+
+# Create user admin, then add forwader-server.
+if [ ! -f ${FWDR_HOME}/etc/system/local/user-seed.conf ] ; then
+   echo -e "Creating Admin user for splunkforwarder."
+   echo "[user_info]" > ${FWDR_HOME}/etc/system/local/user-seed.conf
+   echo "USERNAME = $1" >> ${FWDR_HOME}/etc/system/local/user-seed.conf
+   echo "PASSWORD = $1$1" >> ${FWDR_HOME}/etc/system/local/user-seed.conf
+   sudo ${FWDR_SERVICE} restart &> /dev/null
+   sudo ${FWDR_SERVICE} add forward-server 192.168.100.11:9997 -auth $1:$1$1 || { echo -e "Failed to add forward-serveri"; exit 1; }
+   echo -e "- Forward-server added"
+   sudo ${FWDR_SERVICE} restart &> /dev/null && echo -e "Restarted splunkforwarder service"
+fi
+

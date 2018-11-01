@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Downloads, extracts, and run Splunk service. 
+
+if [ ! -e ${SPLUNK_HOME} ]; then
+   cd /opt
+   echo -e "Downloading Splunk package. This may take a while."
+   sudo wget -O splunk-7.2.0-8c86330ac18-Linux-x86_64.tgz 'https://www.splunk.com/bin/splunk/DownloadActivityServlet?architecture=x86_64&platform=linux&version=7.2.0&product=splunk&filename=splunk-7.2.0-8c86330ac18-Linux-x86_64.tgz&wget=true' &> /dev/null || { echo -e "Failed downloading splunk"; exit 1; }
+   echo -e "- Successfully downloaded Splunk"
+   echo -e "Extracting splunk package..."
+   sudo tar -zxf splunk*.tgz &> /dev/null || { echo -e "Failed extracting splunk.tgz file"; exit 1; }
+   echo -e "- Splunk tar file successfully extracted"
+   sudo ${SPLUNK_SERVICE}  start --accept-license --no-prompt &> /dev/null|| { echo -e "- Error starting Splunk."; exit 1; }
+   sudo ${SPLUNK_SERVICE} enable boot-start
+   echo -e "- Splunk service started."
+fi
+
+# Create user admin. Then enables incoming port of 9997.
+if [ ! -f ${SPLUNK_HOME}/etc/system/local/user-seed.conf ] ; then
+   echo -e "Creating Admin user for splunk."
+   echo "[user_info]" > ${SPLUNK_HOME}/etc/system/local/user-seed.conf
+   echo "USERNAME = $1" >> ${SPLUNK_HOME}/etc/system/local/user-seed.conf
+   echo "PASSWORD = $1$1" >> ${SPLUNK_HOME}/etc/system/local/user-seed.conf
+   sudo ${SPLUNK_SERVICE} restart &> /dev/null
+   sudo ${SPLUNK_SERVICE} enable listen 9997 -auth $1:$1$1 &> /dev/null && echo -e "Added receiving port 9997"
+   sudo ${SPLUNK_SERVICE} restart &> /dev/null && echo -e "Restarted splunk service"
+fi

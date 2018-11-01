@@ -1,0 +1,12 @@
+#!/bin/bash
+
+echo "Centos Provisioner"
+
+# Update packages and Install additional services
+sudo yum clean all &> /dev/null || { echo -e "* update failed!"; exit 1; }
+echo -e "- Repo cleanup done"
+echo -e "Updating repo and services..."
+sudo yum -y upgrade &> /dev/null || { echo -e "* upgrade failed!"; exit 1; }
+echo -e "- Packages update done"
+sudo yum install wget -y &> /dev/null
+sudo setenforce 0
